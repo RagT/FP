@@ -1,5 +1,8 @@
 /**
- * Created by Raghu on 6/4/2016.
+ * Raghu Tirumala
+ * CSS 430 final project
+ *
+ * Directory class for File System
  */
 public class Directory {
     private static int maxChars = 30; // max characters of each file name
@@ -18,29 +21,63 @@ public class Directory {
         root.getChars( 0, fsize[0], fnames[0], 0 ); // fnames[0] includes "/"
     }
 
+    // assumes data[] received directory information from disk
+    // initializes the Directory instance with this data[]
     public int bytes2directory( byte data[] ) {
-        // assumes data[] received directory information from disk
-        // initializes the Directory instance with this data[]
+        int offset = 0;
+        for (int i = 0; i < fsize.length; i++) {
+            fsize[i] = SysLib.bytes2int(data, offset);
+            offset += 4;
+        }
+        // initializes Directory with data[]
+        for (int i = 0; i < fsize.length; i++) {
+            String temp = new String(data, offset, maxChars * 2);
+            temp.getChars(0, fsize[i], fnames[i], 0);
+            offset += (maxChars * 2);
+        }
     }
 
+    // converts and return Directory information into a plain byte array
+    // this byte array will be written back to disk
     public byte[] directory2bytes( ) {
-        // converts and return Directory information into a plain byte array
-        // this byte array will be written back to disk
-        // note: only meaningfull directory information should be converted
-        // into bytes.
+        byte[] dirArr;   //Array to store directory information
+
     }
 
+    // filename is the one of a file to be created.
+    // allocates a new inode number for this filename
     public short ialloc( String filename ) {
-        // filename is the one of a file to be created.
-        // allocates a new inode number for this filename
+        for (int i = 1, l = fsize.length; i < l; i++) {
+            if (fsize[i] == 0) {
+                fsize[i] = Math.min(filename.length(), maxChars);
+                filename.getChars(0, fsize[i], fnames[i], 0);
+                return (short) i;
+            }
+        }
+        return -1;
     }
 
+    // deallocates this inumber (inode number)
+    // the corresponding file will be deleted.
     public boolean ifree( short iNumber ) {
-        // deallocates this inumber (inode number)
-        // the corresponding file will be deleted.
+        if (fsize[iNumber] < 0) {
+            return false;
+        }
+        fsize[iNumber] = 0;
+        return true;
     }
 
+    // returns the inumber corresponding to this filename
     public short namei( String filename ) {
-        // returns the inumber corresponding to this filename
+        String fname;
+        for (int i = 0; i < fsize.length; i++) {
+            if (fsize[i] == filename.length()) {
+                fname = new String(fnames[i], 0, fsize[i]);
+                if (filename.compareTo(fname) == 0) {
+                    return (short) i;
+                }
+            }
+        }
+        return -1;
     }
 }
