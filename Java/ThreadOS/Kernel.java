@@ -156,7 +156,7 @@ public class Kernel
                         }
                      case STDOUT:
                      case STDERR:
-                        System.out.println( "threaOS: caused read errors" );
+                        System.out.println( "threadOS: caused read errors" );
                         return ERROR;
                   }
                   if ( ( myTcb = scheduler.getMyTcb( ) ) != null ) {
@@ -168,7 +168,7 @@ public class Kernel
                case WRITE:
                   switch ( param ) {
                      case STDIN:
-                        System.out.println( "threaOS: cannot write to System.in" );
+                        System.out.println( "threadOS: cannot write to System.in" );
                         return ERROR;
                      case STDOUT:
                         System.out.print( (String)args );
