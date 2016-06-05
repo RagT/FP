@@ -40,8 +40,19 @@ public class Directory {
     // converts and return Directory information into a plain byte array
     // this byte array will be written back to disk
     public byte[] directory2bytes( ) {
-        byte[] dirArr;   //Array to store directory information
-
+        byte [] dirArr = new byte[64 * maxChars * 2];
+        int offset = 0;
+        for (int i = 0; i < fsize.length; i++) {
+            SysLib.int2bytes(fsize[i], dirArr, offset);
+            offset += 4;
+        }
+        for (int i = 0; i < fsize.length; i++) {
+            String temp = new String(fnames[i], 0, fsize[i]);
+            byte [] bytes = temp.getBytes();
+            System.arraycopy(bytes, 0, dirArr, offset, bytes.length);
+            offset += maxChars * 2;
+        }
+        return dirArr;
     }
 
     // filename is the one of a file to be created.
