@@ -48,8 +48,13 @@ public class SuperBlock {
         }
 
         // Setting free list based on number of Inodes
-
-        freeList = numInodes / 16 + (numInodes % 16 == 0 ? 1 : 2);
+        int var;
+        if(numInodes % 16 == 0) {
+            var = 1;
+        } else {
+            var = 2;
+        }
+        freeList = numInodes / 16 + var;
 
         // create new free blocks and write it into Disk
         for (int i = totalBlocks - 2; i >= freeList; i--) {
@@ -105,5 +110,15 @@ public class SuperBlock {
         return freeBlock;
     }
 
-
+    /*
+    Add a block to end of the freelist.
+    Return true if success false otherwise.
+     */
+    public boolean returnBlock(int blockNum){
+        byte[] buffer = new byte[Disk.blockSize];
+        SysLib.short2bytes((short)freeList,buffer, 0);
+        SysLib.rawwrite(blockNum, buffer);
+        freeList = blockNum;
+        return true;
+    }
 }
