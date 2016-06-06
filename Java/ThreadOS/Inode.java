@@ -5,8 +5,8 @@
  *Inode Class
  */
 public class Inode {
-    private final static int iNodeSize = 32;       // fix to 32 bytes
-    private final static int directSize = 11;      // # direct pointers
+    public final static int iNodeSize = 32;       // fix to 32 bytes
+    public final static int directSize = 11;      // # direct pointers
 
     public int length;                             // file size in bytes
     public short count;                            // # file-table entries pointing to this
@@ -79,4 +79,40 @@ public class Inode {
     private int offset(short iNumber){
         return (iNumber / 16) + 1;
     }
+
+    public short findTargetBlock(int offset) {
+        int block, iBlock; // offset block, indirect offset
+        byte[] data;
+        block = offset / Disk.blockSize;
+
+        // target block is in one of the direct blocks
+        // return the block
+        if (block < directSize) {
+            return direct[block];
+        }
+
+        // this block is not registered
+        if (indirect == -1) {
+            return -1;
+        }
+
+        data = new byte[Disk.blockSize];
+        SysLib.rawread(indirect, data);
+
+        // get the target block in indirect block and return
+        iBlock = block - directSize;
+        return SysLib.bytes2short(data, iBlock * 2);
+    }
+
+    public byte[] freeIndirectBlock(){
+        if (indirect >= 0) {
+            byte[] data = new byte[maxBytes];
+            SysLib.rawread(indirect, data);
+            indirect = -1;
+            return data;
+        } else {
+            return null;
+        }
+    }
+
 }
