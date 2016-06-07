@@ -106,7 +106,7 @@ public class Inode {
 
     public byte[] freeIndirectBlock(){
         if (indirect >= 0) {
-            byte[] data = new byte[maxBytes];
+            byte[] data = new byte[512];
             SysLib.rawread(indirect, data);
             indirect = -1;
             return data;
