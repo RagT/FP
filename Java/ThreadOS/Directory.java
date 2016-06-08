@@ -35,6 +35,7 @@ public class Directory {
             temp.getChars(0, fsize[i], fnames[i], 0);
             offset += (maxChars * 2);
         }
+        return 0;
     }
 
     // converts and return Directory information into a plain byte array
