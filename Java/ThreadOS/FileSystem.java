@@ -138,76 +138,187 @@ public class FileSystem {
         }
         return index;
     }
-
-    //Write to file in the FileTableEntry from the data passed in
-    public int write(FileTableEntry fte, byte[] data) {
-        //Check if fte is in correct mode to write to
-        if(fte.mode.equals("r") || fte == null) {
+    public int write(FileTableEntry fte, byte[] buffer) {
+        int seekPtr, length, offset, remaining, available, wLength, index;
+        short block;
+        Inode iNode;
+        byte[] data;
+        // file table entry cannot be null
+        if (fte == null)
             return -1;
-        }
-        int bytesWritten = 0;
-        int dataSize = data.length;
-        int blockSize = 512;
-
+        // mode cannot be read only
+        if (fte.mode.equals("r"))
+            return -1;
+        // iNode cannot be null
+        if ((iNode = fte.inode) == null)
+            return -1;
+        // iNode must not be in use
+        if (iNode.flag == 2 || iNode.flag == 3
+                || iNode.flag == 4)
+            return -1;
+        // write up to buffer length
+        length = buffer.length;
+        // on error, set iNode flag to "to be deleted" because it's probably
+        // garbage now
+        // multiple threads cannot write at the same time
         synchronized (fte) {
-            while (dataSize > 0) {
-                int location = fte.inode.findTargetBlock(fte.seekPtr);
+            // start at position pointed to by inode's seek pointer
+            // append should set seek pointer to EOF
+            seekPtr = fte.mode.equals("a")
+                    ? seek(fte, 0, 2)
+                    : fte.seekPtr;
+            iNode.flag = 3; // set flag to write
+            index = 0;
+            data = new byte[Disk.blockSize];
+            while (index < length) {
 
-                // if current block is null
-                if (location == -1) {
-                    short newLocation = (short) superBlock.nextFreeBlock();
+                // byte offset-- 0 is a new block
+                offset = seekPtr % Disk.blockSize;
+                // bytes available
+                available = Disk.blockSize - offset;
+                // bytes remaining
+                remaining = length - index;
+                // bytes to write-- cannot be greater than available
+                wLength = Math.min(available, remaining);
 
-                    int testPtr = fte.inode.getIndexNumber(fte.seekPtr, newLocation);
-
-                    if (testPtr == -3)
-                    {
-                        short freeBlock = (short) superBlock.nextFreeBlock();
-                        // indirect pointer is empty
-                        if (!fte.inode.setIndexBlock(freeBlock)) {
-                            return -1;
+                // get next block from iNode
+                if ((block = iNode.findTargetBlock(offset)) == -1) {
+                    // if ERROR, file is out of memory, so get a new block
+                    if ((block = (short) superBlock.nextFreeBlock()) ==  -1) {
+                        iNode.flag = 4;
+                        break;
+                        // return ERROR; // no more free blocks
+                    }
+                    // read the file to the block
+                    if (iNode.getIndexNumber(seekPtr, block) == -1) {
+                        // out of bounds, try to get a new indirect block
+                        if (iNode.setIndexBlock(block) == false) {
+                            iNode.flag = 4;
+                            break;
+                            // return ERROR;
                         }
-                        // check block pointer
-                        if (fte.inode.getIndexNumber(fte.seekPtr, newLocation) != 0) {
-                            return -1;
+                        // index block set, get a new block
+                        if ((block = (short) superBlock.nextFreeBlock()) == -1) {
+                            iNode.flag = 4;
+                            break;
+                            // return ERROR; // no more free blocks
+                        }
+                        if (iNode.getIndexNumber(seekPtr, block) == -1) {
+                            iNode.flag = 4;
+                            break;
+                            // return ERROR;
                         }
                     }
-                    else if (testPtr == -2 || testPtr == -1) {
-                        return -1;
-                    }
-                    location = newLocation;
                 }
 
-                byte [] tempBuff = new byte[blockSize];
-                SysLib.rawread(location, tempBuff);
-
-                int tempPtr = fte.seekPtr % blockSize;
-                int diff = blockSize - tempPtr;
-
-                if (diff > dataSize) {
-                    System.arraycopy(data, bytesWritten, tempBuff, tempPtr, dataSize);
-                    SysLib.rawwrite(location, tempBuff);
-
-                    fte.seekPtr += dataSize;
-                    bytesWritten += dataSize;
-                    dataSize = 0;
-                } else {
-                    System.arraycopy(data, bytesWritten, tempBuff, tempPtr, diff);
-                    SysLib.rawwrite(location, tempBuff);
-
-                    fte.seekPtr += diff;
-                    bytesWritten += diff;
-                    dataSize -= diff;
+                if (block >= superBlock.totalBlocks) {
+                    iNode.flag = 4;
+                    break;
                 }
-            }
 
-            if (fte.seekPtr > fte.inode.length) {
-                fte.inode.length = fte.seekPtr;
+                if (offset == 0) {
+                    data = new byte[Disk.blockSize];
+                }
+
+                SysLib.rawread(block, data);
+
+                // copy data to buffer
+                // source, source position, destination, destination position,
+                // length to copy
+                System.arraycopy(buffer, index, data, offset, wLength);
+                // write data to disk
+
+                SysLib.rawwrite(block, data);
+
+                index += wLength;
+                seekPtr += wLength;
             }
-            fte.inode.toDisk(fte.iNumber);
-            return bytesWritten;
+            // update iNode for append or w+
+            if (seekPtr > iNode.length)
+                iNode.length = seekPtr;
+            // set new seek pointer
+            seek(fte, index, 1);
+            if (iNode.flag != 4) {
+                // iNode is now USED
+                iNode.flag = 1;
+            }
+            // save iNode to disk
+            iNode.toDisk(fte.iNumber);
         }
-
+        // if error was not returned, all bytes wrote successfully-- return
+        // length
+        return index;
     }
+
+//    //Write to file in the FileTableEntry from the data passed in
+//    public int write(FileTableEntry fte, byte[] data) {
+//        //Check if fte is in correct mode to write to
+//        if(fte.mode.equals("r") || fte == null) {
+//            return -1;
+//        }
+//        int bytesWritten = 0;
+//        int dataSize = data.length;
+//        int blockSize = 512;
+//
+//        synchronized (fte) {
+//            while (dataSize > 0) {
+//                int location = fte.inode.findTargetBlock(fte.seekPtr);
+//
+//                // if current block is null
+//                if (location == -1) {
+//                    short newLocation = (short) superBlock.nextFreeBlock();
+//
+//                    int testPtr = fte.inode.getIndexNumber(fte.seekPtr, newLocation);
+//
+//                    if (testPtr == -3)
+//                    {
+//                        short freeBlock = (short) superBlock.nextFreeBlock();
+//                        // indirect pointer is empty
+//                        if (!fte.inode.setIndexBlock(freeBlock)) {
+//                            return -1;
+//                        }
+//                        // check block pointer
+//                        if (fte.inode.getIndexNumber(fte.seekPtr, newLocation) != 0) {
+//                            return -1;
+//                        }
+//                    }
+//                    else if (testPtr == -2 || testPtr == -1) {
+//                        return -1;
+//                    }
+//                    location = newLocation;
+//                }
+//
+//                byte [] tempBuff = new byte[blockSize];
+//                SysLib.rawread(location, tempBuff);
+//
+//                int tempPtr = fte.seekPtr % blockSize;
+//                int diff = blockSize - tempPtr;
+//
+//                if (diff > dataSize) {
+//                    System.arraycopy(data, bytesWritten, tempBuff, tempPtr, dataSize);
+//                    SysLib.rawwrite(location, tempBuff);
+//
+//                    fte.seekPtr += dataSize;
+//                    bytesWritten += dataSize;
+//                    dataSize = 0;
+//                } else {
+//                    System.arraycopy(data, bytesWritten, tempBuff, tempPtr, diff);
+//                    SysLib.rawwrite(location, tempBuff);
+//
+//                    fte.seekPtr += diff;
+//                    bytesWritten += diff;
+//                    dataSize -= diff;
+//                }
+//            }
+//
+//            if (fte.seekPtr > fte.inode.length) {
+//                fte.inode.length = fte.seekPtr;
+//            }
+//            fte.inode.toDisk(fte.iNumber);
+//            return bytesWritten;
+//        }
+//
+//    }
 
     public synchronized int seek(FileTableEntry fte, int offset, int loc){
         int eof;
