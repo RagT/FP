@@ -93,108 +93,51 @@ public class FileSystem {
         int seekPtr, length, block, offset, available, remaining, rLength, index;
         Inode iNode;
         byte[] data;
-        // file table entry cannot be null
         if (fte == null)
             return -1;
-        // mode must be read
-        if (fte.mode.equals("w")
-                || fte.mode.equals("a"))
-            return -1;
-        // iNode cannot be null
-        if ((iNode = fte.inode) == null)
-            return -1;
-        // read up to buffer length
-        length = buffer.length;
 
-        // multiple threads cannot read at the same time
+        if (fte.mode.equals("w") || fte.mode.equals("a")) {
+            return -1;
+        }
+
+        if ((iNode = fte.inode) == null) {
+            return -1;
+        }
+
+        length = buffer.length;
         synchronized (fte) {
-            // start at position pointed to by iNode's seek pointer
+
             seekPtr = fte.seekPtr;
             data = new byte[Disk.blockSize];
             index = 0;
             while (index < length) {
-                // byte offset-- 0 is a new block
+
                 offset = seekPtr % Disk.blockSize;
-                // bytes available
                 available = Disk.blockSize - offset;
-                // bytes remaining
                 remaining = length - index;
-                // bytes to read-- cannot be greater than available
                 rLength = Math.min(available, remaining);
 
-                // block must exist
                 if ((block = iNode.findTargetBlock(offset)) == -1) {
-                    // if ((block = iNode.findTargetBlock(seekPtr)) == ERROR) {
                     return -1;
                 }
 
                 if (block < 0 || block >= superBlock.totalBlocks) {
                     break;
-                    // return ERROR;
                 }
 
                 if (offset == 0) {
                     data = new byte[Disk.blockSize];
                 }
 
-                // read block from disk to data
                 SysLib.rawread(block, data);
-
-                // copy data to buffer
-                // source, source position, destination, destination position,
-                // length to copy
                 System.arraycopy(data, offset, buffer, index, rLength);
-
                 index += rLength;
                 seekPtr += rLength;
             }
-            // set new seek pointer
             seek(fte, index, 1);
         }
         return index;
     }
-
-    //Read the file from the FileTableEntry into a byte array buffer
-//    public int read(FileTableEntry fte, byte[] buffer) {
-//        //Check for invalid mode (Valid modes are read only and read and write)
-//        if(fte.mode.equals("w") || fte.mode.equals("a")) {
-//            return -1;
-//        }
-//        int buffSize  = buffer.length;   //size of data to read
-//        int rBuff = 0;
-//        int blockSize = 512;        //set block size to 512
-//        int itr = 0;
-//
-//        synchronized(fte) {
-//            while (fte.seekPtr < fsize(fte) && (buffSize > 0)) {
-//                int currentBlock = fte.inode.findTargetBlock(fte.seekPtr);
-//                if (currentBlock == -1) {
-//                    break;
-//                }
-//                byte[] data = new byte[blockSize];
-//                SysLib.rawread(currentBlock, data);
-//
-//                int dataOffset = fte.seekPtr % blockSize;
-//                int blocksRemaining = blockSize - itr;
-//                int fileLeft = fsize(fte) - fte.seekPtr;
-//
-//                if (blocksRemaining < fileLeft) {
-//                    itr = blocksRemaining;
-//                } else {
-//                    itr = fileLeft;
-//                }
-//                if (itr > buffSize) {
-//                    itr = buffSize;
-//                }
-//
-//                System.arraycopy(data, dataOffset, buffer, rBuff, itr);
-//                rBuff += itr;
-//                fte.seekPtr += itr;
-//                buffSize -= itr;
-//            }
-//            return rBuff;
-//        }
-//    }
 
     //Write to file in the FileTableEntry from the data passed in
     public int write(FileTableEntry fte, byte[] data) {
