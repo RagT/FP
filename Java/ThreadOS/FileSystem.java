@@ -192,22 +192,36 @@ public class FileSystem {
     }
 
     public synchronized int seek(FileTableEntry fte, int offset, int loc){
-        if(loc < 1){
-            fte.seekPtr = 0 + offset;
-        }else if(loc == 1){
-            fte.seekPtr += offset;
-        }else if(loc == 2){
-            fte.seekPtr = fte.inode.length + offset;
-        }else{
-            fte.seekPtr = fte.inode.length;
+        int seekPtr;
+        int eof;
+        if (fte == null) {
+            return -1;
         }
-        if (fte.seekPtr > fte.inode.length) {
-            fte.seekPtr = fte.inode.length;
+        synchronized (fte) {
+            seekPtr = fte.seekPtr;
+            eof = fsize(fte);
+            switch (loc) {
+                case 0 :
+
+                    seekPtr = offset;
+                    break;
+                case 1 :
+                    seekPtr += offset;
+                    break;
+                case 2 :
+                    seekPtr = eof + offset;
+                    break;
+                default :
+                    return -1;
+            }
+            if (seekPtr < 0) {
+                seekPtr = 0;
+            } else if (seekPtr > eof) {
+                seekPtr = eof;
+            }
+            fte.seekPtr = seekPtr;
         }
-        if (fte.seekPtr < 0) {
-            fte.seekPtr = 0;
-        }
-        return fte.seekPtr;
+        return seekPtr;
     }
 
 
