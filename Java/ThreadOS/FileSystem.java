@@ -59,6 +59,9 @@ public class FileSystem {
     }
 
     public boolean format(int files) {
+        if (!fileTable.fempty()) {
+            return false;
+        }
         superBlock.format(files);
         directory = new Directory(superBlock.totalInodes);
         fileTable = new FileTable(directory);
