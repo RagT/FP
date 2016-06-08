@@ -83,34 +83,6 @@ public class SuperBlock {
     }
 
     /*
-    Get the first block from the freelist and remove that
-    block from the freelist.
-     */
-    public short getFreeBlock() {
-        short freeBlock;
-        byte[] block;
-
-        // return -1 if there are no free blocks
-        if (freeList < 0 || freeList > totalBlocks)
-            return -1;
-
-        // Get free block from free list
-        freeBlock = (short) freeList;
-
-        // create new empty block
-        block = new byte[Disk.blockSize];
-
-        // get content of freeList block
-        SysLib.rawread(freeList, block);
-        SysLib.int2bytes(0, block, 0);
-        SysLib.rawwrite(freeList, block);
-
-        // free list becomes free block
-        freeList = SysLib.bytes2int(block, 0);
-        return freeBlock;
-    }
-
-    /*
     Add a block to end of the freelist.
     Return true if success false otherwise.
      */

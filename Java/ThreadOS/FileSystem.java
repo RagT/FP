@@ -119,7 +119,7 @@ public class FileSystem {
         }
     }
 
-    //Write to file in the FilTableEntry from the data passed in
+    //Write to file in the FileTableEntry from the data passed in
     public int write(FileTableEntry fte, byte[] data) {
         //Check if fte is in correct mode to write to
         if(fte.mode.equals("r") || fte == null) {
