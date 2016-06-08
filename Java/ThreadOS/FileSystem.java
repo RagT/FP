@@ -95,14 +95,14 @@ public class FileSystem {
         byte[] data;
         // file table entry cannot be null
         if (fte == null)
-            return ERROR;
+            return -1;
         // mode must be read
-        if (fte.mode == FileTableEntry.WRITEONLY
-                || fte.mode == FileTableEntry.APPEND)
-            return ERROR;
+        if (fte.mode.equals("w")
+                || fte.mode.equals("a"))
+            return -1;
         // iNode cannot be null
-        if ((iNode = fte.iNode) == null)
-            return ERROR;
+        if ((iNode = fte.inode) == null)
+            return -1;
         // read up to buffer length
         length = buffer.length;
 
