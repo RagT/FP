@@ -24,9 +24,9 @@ public class FileTable {
         if(entryMode < 0) { //Invalid mode
             return null;
         }
-        short iNumber = -1;
-        Inode fileNode = null;
-        FileTableEntry fte = null;
+        short iNumber;
+        Inode fileNode;
+        FileTableEntry fte;
 
         while (true) {
             if(filename.equals("/")) {
@@ -35,10 +35,12 @@ public class FileTable {
                 iNumber = dir.namei(filename);
             }
             if (iNumber < 0) {
-                if (entryMode == 0)
+                if (entryMode == 0) {
                     return null;
-                if ((iNumber = dir.ialloc(filename)) < 0)
+                }
+                if ((iNumber = dir.ialloc(filename)) < 0) {
                     return null;
+                }
                 fileNode = new Inode();
                 break;
             }
