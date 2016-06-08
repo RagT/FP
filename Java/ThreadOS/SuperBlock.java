@@ -121,4 +121,23 @@ public class SuperBlock {
         freeList = blockNum;
         return true;
     }
+
+    /*
+     * Returns first free block from free list
+     */
+    public int nextFreeBlock() {
+        if (freeList > 0 && freeList < totalBlocks) {
+            byte[] temp = new byte[Disk.blockSize];
+            SysLib.rawread(freeList, temp);
+
+            int tempVal = freeList;
+
+            // update next free block
+            freeList = SysLib.bytes2int(temp, 0);
+
+            // return block location
+            return tempVal;
+        }
+        return -1;
+    }
 }

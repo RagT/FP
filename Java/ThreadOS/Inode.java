@@ -14,7 +14,7 @@ public class Inode {
     public short direct[] = new short[directSize]; // direct pointers
     public short indirect;                         // a indirect pointer
 
-    Inode( ) {                                     // a default constructor
+    public Inode( ) {                                     // a default constructor
         length = 0;
         count = 0;
         flag = 1; //Initialized to unused
@@ -73,6 +73,7 @@ public class Inode {
 
         // write back to the Disk
         SysLib.rawwrite(block, data);
+        return 0; //Success
     }
 
     //Get the offset of the block
@@ -115,4 +116,54 @@ public class Inode {
         }
     }
 
+    public boolean setIndexBlock(short blockNumber){
+        for (int i = 0; i < directSize; i++){
+            if (direct[i] == -1){
+                return false;
+            }
+        }
+        if (indirect != -1){
+            return false;
+        }
+        indirect = blockNumber;
+        byte[ ] data = new byte[512];
+        for(int i = 0; i < 256; i++){
+            SysLib.short2bytes((short) -1, data, i * 2);
+        }
+        SysLib.rawwrite(blockNumber, data);
+        return true;
+    }
+
+    int getIndexNumber(int entry, short offset){
+        int target = entry / 512;
+
+        if (target < directSize){
+            if(direct[target] >= 0){
+                return -1;
+            }
+            if ((target > 0 ) && (direct[target - 1 ] == -1)){
+                return -2;
+            }
+            direct[target] = offset;
+            return 0;
+        }
+
+        if (indirect < 0){
+            return -3;
+        } else{
+            byte[] data = new byte[512];
+            SysLib.rawread(indirect,data);
+
+            int blockSpace = (target - directSize) * 2;
+            if ( SysLib.bytes2short(data, blockSpace) > 0){
+                return -1;
+            }
+            else
+            {
+                SysLib.short2bytes(offset, data, blockSpace);
+                SysLib.rawwrite(indirect, data);
+            }
+        }
+        return 0;
+    }
 }

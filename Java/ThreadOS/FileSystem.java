@@ -122,6 +122,70 @@ public class FileSystem {
         if(fte.mode.equals("r") || fte == null) {
             return -1;
         }
+        int bytesWritten = 0;
+        int dataSize = data.length;
+        int blockSize = 512;
+
+        synchronized (fte) {
+            while (dataSize > 0) {
+                int location = fte.inode.findTargetBlock(fte.seekPtr);
+
+                // if current block is null
+                if (location == -1) {
+                    short newLocation = (short) superBlock.nextFreeBlock();
+
+                    int testPtr = fte.inode.getIndexNumber(fte.seekPtr, newLocation);
+
+                    if (testPtr == -3)
+                    {
+                        short freeBlock = (short) superBlock.nextFreeBlock();
+                        // indirect pointer is empty
+                        if (!fte.inode.setIndexBlock(freeBlock)) {
+                            return -1;
+                        }
+                        // check block pointer
+                        if (fte.inode.getIndexNumber(fte.seekPtr, newLocation) != 0) {
+                            return -1;
+                        }
+                    }
+                    else if (testPtr == -2 || testPtr == -1) {
+                        return -1;
+                    }
+                    location = newLocation;
+                }
+
+                byte [] tempBuff = new byte[blockSize];
+                SysLib.rawread(location, tempBuff);
+
+                int tempPtr = fte.seekPtr % blockSize;
+                int diff = blockSize - tempPtr;
+
+                if (diff > dataSize) {
+                    System.arraycopy(data, bytesWritten, tempBuff, tempPtr, dataSize);
+                    SysLib.rawwrite(location, tempBuff);
+
+                    fte.seekPtr += dataSize;
+                    bytesWritten += dataSize;
+                    dataSize = 0;
+                } else {
+                    System.arraycopy(data, bytesWritten, tempBuff, tempPtr, diff);
+                    SysLib.rawwrite(location, tempBuff);
+
+                    fte.seekPtr += diff;
+                    bytesWritten += diff;
+                    dataSize -= diff;
+                }
+            }
+
+            // update inode length if seekPtr larger
+
+            if (fte.seekPtr > fte.inode.length) {
+                fte.inode.length = fte.seekPtr;
+            }
+            fte.inode.toDisk(fte.iNumber);
+            return bytesWritten;
+        }
+
     }
 
     public synchronized int seek(FileTableEntry fte, int offset, int loc){
@@ -144,25 +208,21 @@ public class FileSystem {
     }
 
     private boolean deallocBlocks(FileTableEntry fileTableEntry){
-        short invalid = -1;
         if (fileTableEntry.inode.count != 1) {
             SysLib.cerr("Null Pointer");
             return false;
         }
-
-        for (short blockId = 0; blockId < fileTableEntry.inode.directSize; blockId++) {
-            if (fileTableEntry.inode.direct[blockId] != invalid)
+        for (short bId = 0; bId < fileTableEntry.inode.directSize; bId++) {
+            if (fileTableEntry.inode.direct[bId] != -1)
             {
-                superBlock.returnBlock(blockId);
-                fileTableEntry.inode.direct[blockId] = invalid;
+                superBlock.returnBlock(bId);
+                fileTableEntry.inode.direct[bId] = -1;
             }
         }
-
         byte [] data = fileTableEntry.inode.freeIndirectBlock();
-
         if (data != null) {
             short blockId;
-            while((blockId = SysLib.bytes2short(data, 0)) != invalid)
+            while((blockId = SysLib.bytes2short(data, 0)) != -1)
             {
                 superBlock.returnBlock(blockId);
             }
