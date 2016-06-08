@@ -36,9 +36,21 @@ public class FileSystem {
     }
 
     public FileTableEntry open(String filename, String mode) {
-        FileTableEntry fte = fileTable.falloc(filename, mode);
-        if (mode.equals("w")) {
-            if ( !deallocBlocks( fte)) {
+        FileTableEntry fte;
+        Inode iNode;
+        if (filename == "" || mode == "") {
+            return null;
+        }
+
+        // if file table entry is null
+        if ((fte = fileTable.falloc(filename, mode)) == null || FileTable.getEntryMode(mode) == -1
+                || (iNode = fte.inode) == null || iNode.flag == 4) {
+            fileTable.ffree(fte);
+            return null;
+        }
+        synchronized (fte) {
+            if (fte.mode.equals("w") && !deallocBlocks(fte)) {
+                fileTable.ffree(fte);
                 return null;
             }
         }
