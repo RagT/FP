@@ -104,7 +104,7 @@ public class FileTable {
     }                            // should be called before starting a format
 
     //Returns mode of FileTableEntry given its mode field
-    public short getEntryMode(String mode) {
+    public static short getEntryMode(String mode) {
         if (mode.equalsIgnoreCase("r")) { //read only
             return 0;
         } else if (mode.equalsIgnoreCase("w")) { //write only

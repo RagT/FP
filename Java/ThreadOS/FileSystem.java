@@ -41,9 +41,9 @@ public class FileSystem {
         if (filename == "" || mode == "") {
             return null;
         }
-
+        int m = FileTable.getEntryMode(mode);
         // if file table entry is null
-        if ((fte = fileTable.falloc(filename, mode)) == null || FileTable.getEntryMode(mode) == -1
+        if ((fte = fileTable.falloc(filename, mode)) == null || m == -1
                 || (iNode = fte.inode) == null || iNode.flag == 4) {
             fileTable.ffree(fte);
             return null;
