@@ -224,7 +224,7 @@ public class FileSystem {
                     fte.seekPtr += offset;
                     break;
                 case 2 :
-                    fte.seekPtr += eof + offset;
+                    fte.seekPtr = eof + offset;
                     break;
                 default :
                     return -1;
