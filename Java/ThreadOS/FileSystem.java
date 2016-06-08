@@ -89,108 +89,55 @@ public class FileSystem {
         return fte.inode.length;
     }
 
-    public int read(FileTableEntry entry, byte[] buffer){
-        //entry is index of file in process open-file table
-        //this accesses system wide open file table
-        //data blocks accessed, file control block returned
-
-        //check write or append status
-        if ((entry.mode == "w") || (entry.mode == "a"))
+    public int read(FileTableEntry fte, byte[] buffer) {
+        int seekPtr, length, block, offset, available, remaining, rLength, index;
+        Inode iNode;
+        byte[] data;
+        if (fte == null)
             return -1;
 
-        int size  = buffer.length;   //set total size of data to read
-        int rBuffer = 0;            //track data read
-        int rError = -1;            //track error on read
-        int blockSize = 512;        //set block size
-        int itrSize = 0;            //track how much is left to read
-//        fileLength = fsize(entry);
-//        int fLeft = 0;
+        if (fte.mode.equals("w") || fte.mode.equals("a")) {
+            return -1;
+        }
 
-        //cast the entry as synchronized
-        //loop to read chunks of data
+        if ((iNode = fte.inode) == null) {
+            return -1;
+        }
 
-        synchronized(entry)
-        {
-            while (entry.seekPtr < fsize(entry) && (size > 0))
-            {
-                int currentBlock = entry.inode.findTargetBlock(entry.seekPtr);
-                if (currentBlock == rError)
-                {
+        length = buffer.length;
+        synchronized (fte) {
 
+            seekPtr = fte.seekPtr;
+            data = new byte[Disk.blockSize];
+            index = 0;
+            while (index < length) {
+
+                offset = seekPtr % Disk.blockSize;
+                available = Disk.blockSize - offset;
+                remaining = length - index;
+                rLength = Math.min(available, remaining);
+
+                if ((block = iNode.findTargetBlock(offset)) == -1) {
+                    return -1;
+                }
+
+                if (block < 0 || block >= superBlock.totalBlocks) {
                     break;
                 }
-                byte[] data = new byte[blockSize];
-                SysLib.rawread(currentBlock, data);
 
-                int dataOffset = entry.seekPtr % blockSize;
-                int blocksLeft = blockSize - itrSize;
-                int fileLeft = fsize(entry) - entry.seekPtr;
+                if (offset == 0) {
+                    data = new byte[Disk.blockSize];
+                }
 
-                if (blocksLeft < fileLeft)
-                    itrSize = blocksLeft;
-                else
-                    itrSize = fileLeft;
-
-                if (itrSize > size)
-                    itrSize = size;
-
-                System.arraycopy(data, dataOffset, buffer, rBuffer, itrSize);
-                rBuffer += itrSize;
-                entry.seekPtr += itrSize;
-                size -= itrSize;
+                SysLib.rawread(block, data);
+                System.arraycopy(data, offset, buffer, index, rLength);
+                index += rLength;
+                seekPtr += rLength;
             }
-            return rBuffer;
+            seek(fte, index, 1);
         }
+        return index;
     }
-//    public int read(FileTableEntry fte, byte[] buffer) {
-//        int seekPtr, length, block, offset, available, remaining, rLength, index;
-//        Inode iNode;
-//        byte[] data;
-//        if (fte == null)
-//            return -1;
-//
-//        if (fte.mode.equals("w") || fte.mode.equals("a")) {
-//            return -1;
-//        }
-//
-//        if ((iNode = fte.inode) == null) {
-//            return -1;
-//        }
-//
-//        length = buffer.length;
-//        synchronized (fte) {
-//
-//            seekPtr = fte.seekPtr;
-//            data = new byte[Disk.blockSize];
-//            index = 0;
-//            while (index < length) {
-//
-//                offset = seekPtr % Disk.blockSize;
-//                available = Disk.blockSize - offset;
-//                remaining = length - index;
-//                rLength = Math.min(available, remaining);
-//
-//                if ((block = iNode.findTargetBlock(offset)) == -1) {
-//                    return -1;
-//                }
-//
-//                if (block < 0 || block >= superBlock.totalBlocks) {
-//                    break;
-//                }
-//
-//                if (offset == 0) {
-//                    data = new byte[Disk.blockSize];
-//                }
-//
-//                SysLib.rawread(block, data);
-//                System.arraycopy(data, offset, buffer, index, rLength);
-//                index += rLength;
-//                seekPtr += rLength;
-//            }
-//            seek(fte, index, 1);
-//        }
-//        return index;
-//    }
 
     //Write to file in the FileTableEntry from the data passed in
     public int write(FileTableEntry fte, byte[] data) {
