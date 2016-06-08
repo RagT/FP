@@ -193,7 +193,6 @@ public class FileSystem {
             }
 
             // update inode length if seekPtr larger
-
             if (fte.seekPtr > fte.inode.length) {
                 fte.inode.length = fte.seekPtr;
             }
@@ -214,7 +213,6 @@ public class FileSystem {
             eof = fsize(fte);
             switch (loc) {
                 case 0 :
-
                     seekPtr = offset;
                     break;
                 case 1 :

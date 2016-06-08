@@ -37,24 +37,21 @@ public class SuperBlock {
         format(DEFAULT_INODE_BLOCKS);
     }
 
-    public void format(int numInodes) {
+    public void format(int iNodes) {
         byte[] block = null;
 
-        totalInodes = numInodes;
+        totalInodes = iNodes;
 
         for (int i = 0; i < totalInodes; i++) {
-            Inode newNode = new Inode();
-            newNode.toDisk((short) i);
+            // default flag is UNUSED
+            Inode newInode = new Inode();
+            newInode.toDisk((short) i);
         }
 
-        // Setting free list based on number of Inodes
-        int var;
-        if(numInodes % 16 == 0) {
-            var = 1;
-        } else {
-            var = 2;
-        }
-        freeList = numInodes / 16 + var;
+        // set the free list depends on the number of Inodes
+        // default 64 free list will points to 4
+
+        freeList = iNodes / 16 + (iNodes % 16 == 0 ? 1 : 2);
 
         // create new free blocks and write it into Disk
         for (int i = totalBlocks - 2; i >= freeList; i--) {
@@ -65,11 +62,46 @@ public class SuperBlock {
             SysLib.int2bytes(i + 1, block, 0);
             SysLib.rawwrite(i, block);
         }
-        // Nullptr in last block
+        // last block has null pointer
         SysLib.int2bytes(-1, block, 0);
         SysLib.rawwrite(totalBlocks - 1, block);
+        // finalized and sync SuperBlock info to Disk
+        // with everything formatted
         sync();
     }
+//    public void format(int numInodes) {
+//        byte[] block = null;
+//
+//        totalInodes = numInodes;
+//
+//        for (int i = 0; i < totalInodes; i++) {
+//            Inode newNode = new Inode();
+//            newNode.toDisk((short) i);
+//        }
+//
+//        // Setting free list based on number of Inodes
+//        int var;
+//        if(numInodes % 16 == 0) {
+//            var = 1;
+//        } else {
+//            var = 2;
+//        }
+//        freeList = numInodes / 16 + var;
+//
+//        // create new free blocks and write it into Disk
+//        for (int i = totalBlocks - 2; i >= freeList; i--) {
+//            block = new byte[Disk.blockSize];
+//            for (int j = 0; j < Disk.blockSize; j++) {
+//                block[j] = (byte) 0;
+//            }
+//            SysLib.int2bytes(i + 1, block, 0);
+//            SysLib.rawwrite(i, block);
+//        }
+//        // Nullptr in last block
+//        SysLib.int2bytes(-1, block, 0);
+//        SysLib.rawwrite(totalBlocks - 1, block);
+//        sync();
+//    }
 
     /*
     Write back totalBlocks, totalInodes, and freeList to Disk
