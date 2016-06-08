@@ -200,7 +200,6 @@ public class FileSystem {
                 }
             }
 
-            // update inode length if seekPtr larger
             if (fte.seekPtr > fte.inode.length) {
                 fte.inode.length = fte.seekPtr;
             }
@@ -211,35 +210,32 @@ public class FileSystem {
     }
 
     public synchronized int seek(FileTableEntry fte, int offset, int loc){
-        int seekPtr;
         int eof;
         if (fte == null) {
             return -1;
         }
         synchronized (fte) {
-            seekPtr = fte.seekPtr;
             eof = fsize(fte);
             switch (loc) {
                 case 0 :
-                    seekPtr = offset;
+                    fte.seekPtr = offset;
                     break;
                 case 1 :
-                    seekPtr += offset;
+                    fte.seekPtr += offset;
                     break;
                 case 2 :
-                    seekPtr = eof + offset;
+                    fte.seekPtr = eof + offset;
                     break;
                 default :
                     return -1;
             }
-            if (seekPtr < 0) {
-                seekPtr = 0;
-            } else if (seekPtr > eof) {
-                seekPtr = eof;
+            if (fte.seekPtr < 0) {
+                fte.seekPtr = 0;
+            } else if (fte.seekPtr > eof) {
+                fte.seekPtr = eof;
             }
-            fte.seekPtr = seekPtr;
         }
-        return seekPtr;
+        return fte.seekPtr;
     }
 
 
