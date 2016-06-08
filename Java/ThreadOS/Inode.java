@@ -41,7 +41,7 @@ public class Inode {
             direct[i] = SysLib.bytes2short(data, offset);
             offset += 2;
         }
-        indirect = SysLib.bytes2short(data, offset)
+        indirect = SysLib.bytes2short(data, offset);
     }
 
 
