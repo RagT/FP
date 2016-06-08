@@ -207,6 +207,21 @@ public class FileSystem {
         return fte.seekPtr;
     }
 
+
+    public boolean delete(String fileName) {
+        short inumber;
+        //If blank file name cannot delete
+        if (fileName == "") {
+            return false;
+        }
+        //get inumber of file with given filename if invalid inumber, return false
+        if ((inumber = directory.namei(fileName)) == -1) {
+            return false;
+        }
+        //delete file
+        return directory.ifree(inumber);
+    }
+
     private boolean deallocBlocks(FileTableEntry fileTableEntry){
         if (fileTableEntry.inode.count != 1) {
             SysLib.cerr("Null Pointer");
@@ -230,4 +245,6 @@ public class FileSystem {
         fileTableEntry.inode.toDisk(fileTableEntry.iNumber);
         return true;
     }
+
+
 }
