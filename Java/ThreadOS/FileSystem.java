@@ -37,7 +37,7 @@ public class FileSystem {
 
     public FileTableEntry open(String filename, String mode) {
         FileTableEntry fte = fileTable.falloc(filename, mode);
-        if (mode.equals("w") || mode.equals("w+")) {
+        if (mode.equals("w")) {
             if ( !deallocBlocks( fte)) {
                 return null;
             }
