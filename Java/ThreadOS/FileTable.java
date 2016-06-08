@@ -14,62 +14,74 @@ public class FileTable {
 
     // major public methods
 
-    // allocate a new file (structure) table entry for this file name
+    // allocate a new file (structure) table fte for this file name
     // allocate/retrieve and register the corresponding inode using dir
     // increment this inode's count
     // immediately write back this inode to the disk
-    // return a reference to this file (structure) table entry
+    // return a reference to this file (structure) table fte
     public synchronized FileTableEntry falloc(String filename, String mode) {
-        short entryMode = getEntryMode(mode);
-        if(entryMode < 0) { //Invalid mode
-            return null;
-        }
-        short iNumber;
-        Inode fileNode;
-        FileTableEntry fte;
+        short iNumber = -1; // inode number
+        Inode inode = null; // holds inode
 
         while (true) {
-            if(filename.equals("/")) {
-                iNumber = 0;
-            } else {
-                iNumber = dir.namei(filename);
-            }
-            if (iNumber < 0) {
-                if (entryMode == 0) {
-                    return null;
+            // get the inumber form the inode for given file name
+            iNumber = (filename.equals("/") ? (short) 0 : dir.namei(filename));
+
+            // if the inode for the given file exist
+            if (iNumber >= 0) {
+                inode = new Inode(iNumber);
+
+                // if requesting a read
+                if (mode.equals("r")) {
+
+                    //if flag is read used or unused
+                    if (inode.flag == 2 || inode.flag == 1 || inode.flag == 0) {
+                        // change the flag of the node to read
+                        inode.flag = 2;
+                        break;
+
+                        // if the file is already written wait
+                    } else if (inode.flag == 3) {
+                        try {
+                            wait();
+                        } catch (InterruptedException e) {
+                        }
+                    }
+
+                    //Read and write or append
+                } else {
+                    // if flsg is used/unused change to write
+                    if (inode.flag == 1 || inode.flag == 0) {
+                        inode.flag = 3;
+                        break;
+                        // if flag is read or write
+                    } else {
+                        try {
+                            wait();
+                        } catch (InterruptedException e) {
+                        }
+                    }
                 }
-                if ((iNumber = dir.ialloc(filename)) < 0) {
-                    return null;
-                }
-                fileNode = new Inode();
+            } else if (!mode.equals("r")) {
+                iNumber = dir.ialloc(filename);
+                inode = new Inode(iNumber);
+                inode.flag = 3;
                 break;
-            }
-            fileNode = new Inode(iNumber);
-            if (fileNode.flag == 4) {
+            } else {
                 return null;
             }
-            if (fileNode.flag == 0 || fileNode.flag == 1) {
-                break;
-            }
-            if (entryMode == 0 && fileNode.flag == 0) {
-                break;
-            }
-            try {
-                wait();
-            } catch (InterruptedException e) {
-            }
         }
-        fileNode.count++;
-        fileNode.toDisk(iNumber);
-        fte = new FileTableEntry(fileNode, iNumber, mode);
-        table.add(fte);
+        inode.count++;
+        inode.toDisk(iNumber);
+        FileTableEntry fte = new FileTableEntry(inode, iNumber, mode);
+        table.addElement(fte);
         return fte;
     }
 
-    // receive a file table entry reference
+    // receive a file table fte reference
     // save the corresponding inode to the disk
-    // free this file table entry.
-    // return true if this file table entry found in my table
+    // free this file table fte.
+    // return true if this file table fte found in my table
     public synchronized boolean ffree(FileTableEntry e) {
         if (e == null) {
             return true;
