@@ -42,7 +42,8 @@ public class FileSystem {
             return null;
         }
         int m = FileTable.getEntryMode(mode);
-        // if file table entry is null
+
+        // if file table entry is null or mode is invalid
         if ((fte = fileTable.falloc(filename, mode)) == null || m == -1
                 || (iNode = fte.inode) == null || iNode.flag == 4) {
             fileTable.ffree(fte);
@@ -238,7 +239,7 @@ public class FileSystem {
         return fte.seekPtr;
     }
 
-
+    //Deletes file with given filename from file table
     public boolean delete(String fileName) {
         short inumber;
         //If blank file name cannot delete
@@ -253,19 +254,19 @@ public class FileSystem {
         return directory.ifree(inumber);
     }
 
-    private boolean deallocBlocks(FileTableEntry fileTableEntry){
-        if (fileTableEntry.inode.count != 1) {
+    private boolean deallocBlocks(FileTableEntry fte){
+        if (fte.inode.count != 1) {
             SysLib.cerr("Null Pointer");
             return false;
         }
-        for (short bId = 0; bId < fileTableEntry.inode.directSize; bId++) {
-            if (fileTableEntry.inode.direct[bId] != -1)
+        for (short bId = 0; bId < fte.inode.directSize; bId++) {
+            if (fte.inode.direct[bId] != -1)
             {
                 superBlock.returnBlock(bId);
-                fileTableEntry.inode.direct[bId] = -1;
+                fte.inode.direct[bId] = -1;
             }
         }
-        byte [] data = fileTableEntry.inode.freeIndirectBlock();
+        byte [] data = fte.inode.freeIndirectBlock();
         if (data != null) {
             short blockId;
             while((blockId = SysLib.bytes2short(data, 0)) != -1)
@@ -273,7 +274,7 @@ public class FileSystem {
                 superBlock.returnBlock(blockId);
             }
         }
-        fileTableEntry.inode.toDisk(fileTableEntry.iNumber);
+        fte.inode.toDisk(fte.iNumber);
         return true;
     }
 
