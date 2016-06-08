@@ -55,7 +55,7 @@ public class Inode {
 
         block = offset(iNumber);
         offset = (iNumber % 16) * iNodeSize;
-        data = new byte[iNodeSize];
+        data = new byte[Disk.blockSize];
 
         SysLib.int2bytes(length, data, offset);
         offset += 4;
