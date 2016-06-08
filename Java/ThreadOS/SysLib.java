@@ -75,10 +75,12 @@ public class SysLib {
         The offset can be positive or negative.
      */
     public static int seek(int fd, int offset, int whence) {
-        return Kernel.interrupt( Kernel.INTERRUPT_SOFTWARE,
-                Kernel.SEEK, 0, new int[]{fd, offset, whence} );
+        int[] args = new int[2];
+        args[0] = offset;
+        args[1] = whence;
+        return Kernel.interrupt(Kernel.INTERRUPT_SOFTWARE, Kernel.SEEK, fd,
+                args);
     }
-
     /*
     Closes the file corresponding to fd, commits all file transactions on this file,
     and unregisters fd from the user file descriptor table of the calling thread's TCB.
