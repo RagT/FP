@@ -17,7 +17,7 @@ public class FileSystem {
         byte[] dirData;
 
         FileTableEntry dirEntry = open("/", "r");
-        int dirSize = fsize(dirEntry);
+        int dirSize = fdataSize(dirEntry);
         if (dirSize > 0) {
             // the directory has some data
             dirData = new byte[dirSize];
@@ -43,7 +43,7 @@ public class FileSystem {
         }
         int m = FileTable.getEntryMode(mode);
 
-        // if file table entry is null or mode is invalid
+        // if file table fte is null or mode is invalid
         if ((fte = fileTable.falloc(filename, mode)) == null || m == -1
                 || (iNode = fte.inode) == null || iNode.flag == 4) {
             fileTable.ffree(fte);
@@ -81,8 +81,8 @@ public class FileSystem {
         return true;
     }
 
-    //Return size of file (in bytes)
-    public int fsize(FileTableEntry fte) {
+    //Return dataSize of file (in bytes)
+    public int fSize(FileTableEntry fte) {
         //Invalid fte
         if (fte == null || fte.inode == null) {
             return -1;
@@ -90,109 +90,51 @@ public class FileSystem {
         return fte.inode.length;
     }
 
-    public int read(FileTableEntry entry, byte[] buffer){
-        //entry is index of file in process open-file table
-        //this accesses system wide open file table
-        //data blocks accessed, file control block returned
-
-        //check write or append status
-        if ((entry.mode == "w") || (entry.mode == "a"))
+    //Reads data from fte to buffer
+    public int read(FileTableEntry fte, byte[] buffer){
+        //check for invalid modes
+        if ((fte.mode.equals("w")) || (fte.mode.equals("a"))) {
             return -1;
+        }
 
-        int size  = buffer.length;   //set total size of data to read
-        int rBuffer = 0;            //track data read
-        int rError = -1;            //track error on read
-        int blockSize = 512;        //set block size
-        int itrSize = 0;            //track how much is left to read
-//        fileLength = fsize(entry);
-//        int fLeft = 0;
+        int dataSize  = buffer.length;   //set total dataSize of data to read
+        int rBuff = 0;            //track data read
+        int leftToRead = 0;            //track how much is left to read
 
-        //cast the entry as synchronized
-        //loop to read chunks of data
-
-        synchronized(entry)
+        synchronized(fte)
         {
-            while (entry.seekPtr < fsize(entry) && (size > 0))
+            while (fte.seekPtr < fSize(fte) && (dataSize > 0))
             {
-                int currentBlock = entry.inode.findTargetBlock(entry.seekPtr);
-                if (currentBlock == rError)
+                int currentBlock = fte.inode.findTargetBlock(fte.seekPtr);
+                if (currentBlock == -1)
                 {
 
                     break;
                 }
-                byte[] data = new byte[blockSize];
+                byte[] data = new byte[512];
                 SysLib.rawread(currentBlock, data);
 
-                int dataOffset = entry.seekPtr % blockSize;
-                int blocksLeft = blockSize - itrSize;
-                int fileLeft = fsize(entry) - entry.seekPtr;
+                int dataOffset = fte.seekPtr % 512;
+                int blocksLeft = 512 - leftToRead;
+                int fileLeft = fSize(fte) - fte.seekPtr;
 
                 if (blocksLeft < fileLeft)
-                    itrSize = blocksLeft;
+                    leftToRead = blocksLeft;
                 else
-                    itrSize = fileLeft;
+                    leftToRead = fileLeft;
 
-                if (itrSize > size)
-                    itrSize = size;
+                if (leftToRead > dataSize)
+                    leftToRead = dataSize;
 
-                System.arraycopy(data, dataOffset, buffer, rBuffer, itrSize);
-                rBuffer += itrSize;
-                entry.seekPtr += itrSize;
-                size -= itrSize;
+                System.arraycopy(data, dataOffset, buffer, rBuff, leftToRead);
+                 rBuff+= leftToRead;
+                fte.seekPtr += leftToRead;
+                dataSize -= leftToRead;
             }
-            return rBuffer;
+            return rBuff;
         }
     }
 
-//    public int read(FileTableEntry fte, byte[] buffer) {
-//        int seekPtr, length, block, offset, available, remaining, rLength, index;
-//        Inode iNode;
-//        byte[] data;
-//        if (fte == null)
-//            return -1;
-//
-//        if (fte.mode.equals("w") || fte.mode.equals("a")) {
-//            return -1;
-//        }
-//
-//        if ((iNode = fte.inode) == null) {
-//            return -1;
-//        }
-//
-//        length = buffer.length;
-//        synchronized (fte) {
-//
-//            seekPtr = fte.seekPtr;
-//            data = new byte[Disk.blockSize];
-//            index = 0;
-//            while (index < length) {
-//
-//                offset = seekPtr % Disk.blockSize;
-//                available = Disk.blockSize - offset;
-//                remaining = length - index;
-//                rLength = Math.min(available, remaining);
-//
-//                if ((block = iNode.findTargetBlock(offset)) == -1) {
-//                    return -1;
-//                }
-//
-//                if (block < 0 || block >= superBlock.totalBlocks) {
-//                    break;
-//                }
-//
-//                if (offset == 0) {
-//                    data = new byte[Disk.blockSize];
-//                }
-//
-//                SysLib.rawread(block, data);
-//                System.arraycopy(data, offset, buffer, index, rLength);
-//                index += rLength;
-//                seekPtr += rLength;
-//            }
-//            seek(fte, index, 1);
-//        }
-//        return index;
-//    }
 
     //Write to file in the FileTableEntry from the data passed in
     public int write(FileTableEntry fte, byte[] data) {
@@ -270,7 +212,7 @@ public class FileSystem {
             return -1;
         }
         synchronized (fte) {
-            eof = fsize(fte);
+            eof = fSize(fte);
             switch (loc) {
                 case 0 :
                     fte.seekPtr = offset;
