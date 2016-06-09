@@ -98,8 +98,8 @@ public class FileSystem {
         }
 
         int dataSize  = buffer.length;   //set total dataSize of data to read
-        int rBuff = 0;            //track data read
-        int leftToRead = 0;            //track how much is left to read
+        int rBuff = 0;                   //track data in read
+        int leftToRead = 0;              //track how much is left to read
 
         synchronized(fte)
         {
