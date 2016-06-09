@@ -17,7 +17,7 @@ public class FileSystem {
         byte[] dirData;
 
         FileTableEntry dirEntry = open("/", "r");
-        int dirSize = fdataSize(dirEntry);
+        int dirSize = fsize(dirEntry);
         if (dirSize > 0) {
             // the directory has some data
             dirData = new byte[dirSize];
