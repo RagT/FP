@@ -4,6 +4,7 @@
  *
  * Superblock.java
  */
+ 
 public class SuperBlock {
     private static final int DEFAULT_INODE_BLOCKS = 64;
     public int totalBlocks; // the number of disk blocks
@@ -72,9 +73,8 @@ public class SuperBlock {
         sync();
     }
 
-    /*
-    Write back totalBlocks, totalInodes, and freeList to Disk
-     */
+    
+    //Write back totalBlocks, totalInodes, and freeList to Disk
     public void sync() {
         byte[] block = new byte[Disk.blockSize];
         SysLib.int2bytes(totalBlocks, block, 0);
@@ -83,10 +83,9 @@ public class SuperBlock {
         SysLib.rawwrite(0, block);
     }
 
-    /*
-    Add a block to end of the freelist.
-    Return true if success false otherwise.
-     */
+    
+    //Add a block to end of the freelist.
+    //Return true if success false otherwise.
     public boolean returnBlock(int blockNum){
         byte[] buffer = new byte[Disk.blockSize];
         SysLib.short2bytes((short)freeList,buffer, 0);
@@ -95,9 +94,8 @@ public class SuperBlock {
         return true;
     }
 
-    /*
-     * Returns first free block from free list
-     */
+    
+    //Returns first free block from free list
     public int nextFreeBlock() {
         if (freeList > 0 && freeList < totalBlocks) {
             byte[] temp = new byte[Disk.blockSize];
