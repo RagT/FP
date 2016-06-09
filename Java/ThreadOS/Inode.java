@@ -4,6 +4,7 @@
  *
  *Inode Class
  */
+
 public class Inode {
     public final static int iNodeSize = 32;       // fix to 32 bytes
     public final static int directSize = 11;      // # direct pointers
@@ -44,18 +45,11 @@ public class Inode {
         indirect = SysLib.bytes2short(data, offset);
     }
 
+    public int toDisk( short iNumber ) {                  // save to disk as the i-th inode
 
-    public int toDisk(short iNumber) {                  // save to disk as the i-th inode
-        int offset;
-        int block;
-        byte[] data;
-        if (iNumber < 0) {
-            return -1;
-        }
+        byte [] data = new byte[iNodeSize];
 
-        block = offset(iNumber);
-        offset = (iNumber % 16) * iNodeSize;
-        data = new byte[Disk.blockSize];
+        int offset = 0;
 
         SysLib.int2bytes(length, data, offset);
         offset += 4;
@@ -64,15 +58,23 @@ public class Inode {
         SysLib.short2bytes(flag, data, offset);
         offset += 2;
 
-        for (int i = 0; i < directSize; i++, offset += 2) {
+        for (int i = 0; i < directSize; i++){
             SysLib.short2bytes(direct[i], data, offset);
+            offset += 2;
         }
 
         SysLib.short2bytes(indirect, data, offset);
         offset += 2;
 
-        // write back to the Disk
-        SysLib.rawwrite(block, data);
+        int blockNumber = offset(iNumber);
+        byte[] newData = new byte[Disk.blockSize];
+        SysLib.rawread(blockNumber,newData);
+
+        offset = (iNumber % 16) * iNodeSize;
+
+        System.arraycopy(data, 0, newData, offset, iNodeSize);
+        SysLib.rawwrite(blockNumber,newData);
+
         return 0; //Success
     }
 
