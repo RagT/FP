@@ -82,7 +82,7 @@ public class FileSystem {
     }
 
     //Return dataSize of file (in bytes)
-    public int fSize(FileTableEntry fte) {
+    public int fsize(FileTableEntry fte) {
         //Invalid fte
         if (fte == null || fte.inode == null) {
             return -1;
@@ -103,7 +103,7 @@ public class FileSystem {
 
         synchronized(fte)
         {
-            while (fte.seekPtr < fSize(fte) && (dataSize > 0))
+            while (fte.seekPtr < fsize(fte) && (dataSize > 0))
             {
                 int currentBlock = fte.inode.findTargetBlock(fte.seekPtr);
                 if (currentBlock == -1)
@@ -116,7 +116,7 @@ public class FileSystem {
 
                 int dataOffset = fte.seekPtr % 512;
                 int blocksLeft = 512 - leftToRead;
-                int fileLeft = fSize(fte) - fte.seekPtr;
+                int fileLeft = fsize(fte) - fte.seekPtr;
 
                 if (blocksLeft < fileLeft)
                     leftToRead = blocksLeft;
@@ -212,7 +212,7 @@ public class FileSystem {
             return -1;
         }
         synchronized (fte) {
-            eof = fSize(fte);
+            eof = fsize(fte);
             switch (loc) {
                 case 0 :
                     fte.seekPtr = offset;
